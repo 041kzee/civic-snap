@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background font-sans text-slate-900;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-indigo text-white rounded-lg px-4 py-2 hover:bg-indigo-dark transition-colors duration-200;
+  }
+  
+  .btn-secondary {
+    @apply border border-indigo text-indigo rounded-lg px-4 py-2 hover:bg-indigo-light transition-colors duration-200;
+  }
+  
+  .btn-danger {
+    @apply bg-danger text-white rounded-lg px-4 py-2 hover:opacity-90 transition-colors duration-200;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden;
+  }
+}
