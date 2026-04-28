@@ -1,31 +1,52 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Camera } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Camera, Globe, Info, Activity } from 'lucide-react';
 import Button from '../ui/Button';
 
 const PublicNavbar = () => {
-  return (
-    <nav className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-6 md:px-12 sticky top-0 z-50">
-      <Link to="/" className="flex items-center gap-2">
-        <div className="bg-indigo p-1.5 rounded-lg">
-          <Camera size={20} className="text-white" />
-        </div>
-        <span className="text-xl font-bold text-slate-900 tracking-tight">CivicSnap</span>
-      </Link>
+  const navigate = useNavigate();
 
-      <div className="hidden md:flex items-center gap-8">
-        <Link to="/feed" className="text-sm font-medium text-slate-500 hover:text-indigo transition-colors">Feed</Link>
-        <Link to="/ward-report" className="text-sm font-medium text-slate-500 hover:text-indigo transition-colors">Reports</Link>
-        <Link to="/about" className="text-sm font-medium text-slate-500 hover:text-indigo transition-colors">About</Link>
+  return (
+    <nav className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-10 sticky top-0 z-50">
+      <div className="flex items-center gap-12">
+        <Link to="/" className="flex items-center gap-2 group">
+          <div className="bg-indigo p-2 rounded-2xl shadow-xl shadow-indigo/20 group-hover:scale-110 transition-transform">
+            <Camera size={24} className="text-white" />
+          </div>
+          <span className="text-2xl font-black text-slate-900 tracking-tight">CivicSnap</span>
+        </Link>
+
+        <div className="hidden lg:flex items-center gap-8">
+           {[
+             { label: 'Public Feed', path: '/feed', icon: Activity },
+             { label: 'Ward Reports', path: '/ward-report', icon: Globe },
+             { label: 'About Project', path: '/about', icon: Info },
+           ].map((link) => (
+             <Link 
+               key={link.path} 
+               to={link.path} 
+               className="text-sm font-bold text-slate-500 hover:text-indigo flex items-center gap-2 transition-colors"
+             >
+               <link.icon size={16} />
+               {link.label}
+             </Link>
+           ))}
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <Link to="/auth">
-          <Button variant="secondary" className="hidden sm:block">Login</Button>
-        </Link>
-        <Link to="/auth?mode=register">
-          <Button variant="primary">Get Started</Button>
-        </Link>
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={() => navigate('/auth?mode=login')}
+          className="px-6 py-2.5 text-sm font-bold text-slate-600 hover:text-indigo transition-colors"
+        >
+          Log In
+        </button>
+        <Button 
+          onClick={() => navigate('/auth?mode=register')}
+          className="px-8 py-3 font-bold rounded-2xl shadow-xl shadow-indigo/20"
+        >
+          Get Started
+        </Button>
       </div>
     </nav>
   );

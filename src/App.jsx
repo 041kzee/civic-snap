@@ -1,10 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
-import Navbar from './components/layout/Navbar';
-import Sidebar from './components/layout/Sidebar';
-import PublicNavbar from './components/layout/PublicNavbar';
 import useAuthStore from './store/authStore';
+
+// Common Components
+import Navbar from './components/layout/Navbar';
+import PublicNavbar from './components/layout/PublicNavbar';
 
 // Pages
 import Landing from './pages/Landing';
@@ -35,99 +36,95 @@ import WardReport from './pages/public/WardReport';
 const App = () => {
   const { token, role } = useAuthStore();
 
+  // Helper to determine which navbar to show
+  const showMainNavbar = token && role !== 'authority';
+  const showPublicNavbar = !token;
+  // Authority pages handle their own navigation/sidebar layout
+
   return (
     <Router>
       <div className="min-h-screen bg-background">
-        {/* Conditional Navigation */}
-        {!token ? (
-          <PublicNavbar />
-        ) : (
-          <Navbar />
-        )}
+        {showPublicNavbar && <PublicNavbar />}
+        {showMainNavbar && <Navbar />}
 
-        <div className="flex">
-          {/* Sidebar only for Authority when logged in */}
-          {token && role === 'authority' && <Sidebar />}
-          
-          <main className="flex-1">
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={!token ? <Auth /> : <Navigate to={role === 'authority' ? "/authority/dashboard" : "/map"} />} />
-              <Route path="/feed" element={<AccountabilityFeed />} />
-              <Route path="/ward-report" element={<WardReport />} />
-              <Route path="/about" element={<About />} />
+        <main>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={!token ? <Auth /> : <Navigate to={role === 'authority' ? "/authority/dashboard" : "/map"} />} />
+            <Route path="/feed" element={<AccountabilityFeed />} />
+            <Route path="/ward-report" element={<WardReport />} />
+            <Route path="/about" element={<About />} />
 
-              {/* Protected Citizen Routes */}
-              <Route path="/map" element={
-                <ProtectedRoute allowedRoles={['citizen']}>
-                  <CommunityMap />
-                </ProtectedRoute>
-              } />
-              <Route path="/report" element={
-                <ProtectedRoute allowedRoles={['citizen']}>
-                  <ReportIssue />
-                </ProtectedRoute>
-              } />
-              <Route path="/my-reports" element={
-                <ProtectedRoute allowedRoles={['citizen']}>
-                  <MyReports />
-                </ProtectedRoute>
-              } />
-              <Route path="/notifications" element={
-                <ProtectedRoute allowedRoles={['citizen']}>
-                  <Notifications />
-                </ProtectedRoute>
-              } />
-              <Route path="/leaderboard" element={
-                <ProtectedRoute allowedRoles={['citizen']}>
-                  <Leaderboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedRoute allowedRoles={['citizen']}>
-                  <Profile />
-                </ProtectedRoute>
-              } />
+            {/* Protected Citizen Routes */}
+            <Route path="/map" element={
+              <ProtectedRoute allowedRoles={['citizen']}>
+                <CommunityMap />
+              </ProtectedRoute>
+            } />
+            <Route path="/report" element={
+              <ProtectedRoute allowedRoles={['citizen']}>
+                <ReportIssue />
+              </ProtectedRoute>
+            } />
+            <Route path="/my-reports" element={
+              <ProtectedRoute allowedRoles={['citizen']}>
+                <MyReports />
+              </ProtectedRoute>
+            } />
+            <Route path="/notifications" element={
+              <ProtectedRoute allowedRoles={['citizen']}>
+                <Notifications />
+              </ProtectedRoute>
+            } />
+            <Route path="/leaderboard" element={
+              <ProtectedRoute allowedRoles={['citizen']}>
+                <Leaderboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute allowedRoles={['citizen']}>
+                <Profile />
+              </ProtectedRoute>
+            } />
 
-              {/* Protected Shared Routes */}
-              <Route path="/issues/:id" element={
-                <ProtectedRoute>
-                  <IssueDetail />
-                </ProtectedRoute>
-              } />
+            {/* Protected Shared Routes */}
+            <Route path="/issues/:id" element={
+              <ProtectedRoute>
+                <IssueDetail />
+              </ProtectedRoute>
+            } />
 
-              {/* Protected Authority Routes */}
-              <Route path="/authority/dashboard" element={
-                <ProtectedRoute allowedRoles={['authority']}>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/authority/tickets/:id" element={
-                <ProtectedRoute allowedRoles={['authority']}>
-                  <TicketDetail />
-                </ProtectedRoute>
-              } />
-              <Route path="/authority/analytics" element={
-                <ProtectedRoute allowedRoles={['authority']}>
-                  <Analytics />
-                </ProtectedRoute>
-              } />
-              <Route path="/authority/heatmap" element={
-                <ProtectedRoute allowedRoles={['authority']}>
-                  <Heatmap />
-                </ProtectedRoute>
-              } />
-              <Route path="/authority/departments" element={
-                <ProtectedRoute allowedRoles={['authority']}>
-                  <Departments />
-                </ProtectedRoute>
-              } />
+            {/* Protected Authority Routes */}
+            <Route path="/authority/dashboard" element={
+              <ProtectedRoute allowedRoles={['authority']}>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/authority/tickets/:id" element={
+              <ProtectedRoute allowedRoles={['authority']}>
+                <TicketDetail />
+              </ProtectedRoute>
+            } />
+            <Route path="/authority/analytics" element={
+              <ProtectedRoute allowedRoles={['authority']}>
+                <Analytics />
+              </ProtectedRoute>
+            } />
+            <Route path="/authority/heatmap" element={
+              <ProtectedRoute allowedRoles={['authority']}>
+                <Heatmap />
+              </ProtectedRoute>
+            } />
+            <Route path="/authority/departments" element={
+              <ProtectedRoute allowedRoles={['authority']}>
+                <Departments />
+              </ProtectedRoute>
+            } />
 
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-        </div>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
       </div>
     </Router>
   );
