@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { 
   CheckCircle2, 
   Clock, 
@@ -8,108 +8,85 @@ import {
   Users, 
   MessageSquare, 
   Send,
-  MoreVertical,
-  AlertTriangle,
-  ChevronDown,
+  Loader2,
   ShieldCheck,
+  AlertTriangle,
   User as UserIcon,
-  Loader2
+  ChevronRight
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import useAuthStore from '../../store/authStore';
-import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
 
 const IssueDetail = () => {
   const { id } = useParams();
   const { role } = useAuthStore();
   const [upvoted, setUpvoted] = useState(false);
   const [meToo, setMeToo] = useState(false);
-  const [comment, setComment] = useState('');
+  const [commentText, setCommentText] = useState('');
 
-  const timeline = [
-    { label: "Reported", date: "Oct 24, 10:30 AM", status: "completed" },
-    { label: "Assigned to Department", date: "Oct 24, 2:15 PM", status: "completed" },
-    { label: "In Progress", date: "Oct 25, 9:00 AM", status: "current" },
-    { label: "Resolved", date: "Pending", status: "pending" },
+  const timelineSteps = [
+    { label: "Reported", status: "completed", time: "Oct 24, 10:30 AM" },
+    { label: "Assigned to Department", status: "completed", time: "Oct 24, 2:15 PM" },
+    { label: "In Progress", status: "current", time: "Oct 25, 9:00 AM" },
+    { label: "Resolved", status: "pending", time: "Expected 2 days" },
   ];
 
-  const comments = [
-    { id: 1, name: "Anita S.", time: "1h ago", text: "This is really dangerous at night, please fix soon!", initials: "AS" },
-    { id: 2, name: "Vikram R.", time: "5h ago", text: "I've seen three cyclists almost fall here today.", initials: "VR" },
-    { id: 3, name: "Ward Officer", time: "2h ago", text: "Team has been dispatched for a temporary fix.", initials: "WO", isOfficial: true },
+  const mockComments = [
+    { id: 1, name: "Anita S.", time: "1h ago", initials: "AS", text: "This pothole is extremely deep, please be careful." },
+    { id: 2, name: "Vikram R.", time: "5h ago", initials: "VR", text: "Reported this twice before, hope it gets fixed now." },
+    { id: 3, name: "Sita K.", time: "1d ago", initials: "SK", text: "It's right in front of the school gate." },
   ];
 
   return (
-    <div className="min-h-screen bg-background py-10 px-6 lg:px-12">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8">
+    <div className="min-h-screen bg-background py-8 px-6">
+      <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-6">
         
         {/* Left Column (60%) */}
-        <div className="lg:w-[65%] space-y-8">
-          {/* Main Image Card */}
-          <div className="relative group">
-            <div className="w-full h-96 bg-slate-200 rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white">
-              <img 
-                src="https://images.unsplash.com/photo-1599423300746-b62533397364?w=1000" 
-                alt="Issue detail" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-              />
-            </div>
-            <div className="absolute top-6 left-6 flex gap-2">
-              <Badge status="Open" className="px-4 py-2 text-sm shadow-xl" />
-              <Badge variant="danger" className="px-4 py-2 text-sm shadow-xl flex items-center gap-2">
-                <AlertTriangle size={14} /> High Severity
-              </Badge>
-            </div>
+        <div className="lg:w-[60%] space-y-6">
+          {/* Image */}
+          <div className="w-full h-64 bg-slate-200 rounded-xl overflow-hidden shadow-sm border border-slate-100">
+            <img 
+              src="https://images.unsplash.com/photo-1599423300746-b62533397364?w=800&q=80" 
+              alt="Issue evidence" 
+              className="w-full h-full object-cover"
+            />
           </div>
 
-          {/* Title & Meta */}
-          <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-            <h1 className="text-4xl font-bold text-slate-900 mb-6 leading-tight">Large Pothole — MG Road Main Intersection</h1>
-            <div className="flex flex-wrap items-center gap-4 text-sm font-semibold">
-               <div className="flex items-center gap-2 text-indigo bg-indigo-light px-3 py-1.5 rounded-xl">
-                  <MapPin size={16} /> Ward 4 - Green Valley
-               </div>
-               <div className="flex items-center gap-2 text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl">
-                  <Clock size={16} /> Reported 2 days ago
-               </div>
-               <div className="flex items-center gap-2 text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl">
-                  <UserIcon size={16} /> Reported by Anonymous
-               </div>
+          {/* Header Info */}
+          <div className="space-y-4">
+            <h2 className="text-3xl font-bold text-slate-900">Large Pothole — MG Road</h2>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="indigo">Road Damage</Badge>
+              <Badge variant="danger">High Severity</Badge>
+              <div className="px-3 py-1 rounded-full border border-slate-200 text-xs font-bold text-slate-500 bg-white">
+                Ward 4 - Green Valley
+              </div>
+              <span className="text-xs font-medium text-slate-400 self-center">Reported 2 days ago • Anonymous</span>
             </div>
-            <p className="mt-6 text-slate-600 leading-relaxed text-lg italic">
-              "Severe road degradation near the drainage vent. It's collecting water and causing major traffic slowdowns. Deep enough to damage tires."
-            </p>
           </div>
 
           {/* Status Timeline */}
-          <Card className="p-8 border-none shadow-sm">
-            <h3 className="text-xl font-bold text-slate-900 mb-8 flex items-center gap-2">
-              <Clock className="text-indigo" size={24} />
-              Resolution Timeline
-            </h3>
-            <div className="relative space-y-12">
-              {/* Connector line */}
-              <div className="absolute left-[15px] top-2 bottom-2 w-0.5 bg-slate-100"></div>
-              
-              {timeline.map((step, idx) => (
-                <div key={idx} className="relative flex items-center gap-6 group">
-                  <div className={`w-8 h-8 rounded-full z-10 flex items-center justify-center transition-all duration-300 ${
-                    step.status === 'completed' ? 'bg-emerald text-white shadow-lg shadow-emerald/20' : 
-                    step.status === 'current' ? 'bg-amber text-white animate-pulse shadow-lg shadow-amber/20' : 
-                    'bg-white border-2 border-slate-200 text-slate-300'
+          <Card className="p-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-8">Status Updates</h3>
+            <div className="space-y-8 relative pl-4">
+              <div className="absolute left-6 top-2 bottom-2 w-0.5 bg-slate-100"></div>
+              {timelineSteps.map((step, i) => (
+                <div key={i} className="flex items-center gap-6 relative z-10">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                    step.status === 'completed' ? 'bg-emerald text-white' : 
+                    step.status === 'current' ? 'bg-amber text-white ring-4 ring-amber/20' : 
+                    'bg-slate-100 text-slate-400'
                   }`}>
-                    {step.status === 'completed' ? <CheckCircle2 size={16} /> : 
-                     step.status === 'current' ? <Loader2 size={16} className="animate-spin" /> : 
-                     <div className="w-2 h-2 rounded-full bg-slate-200"></div>}
+                    {step.status === 'completed' ? <CheckCircle2 size={20} /> : 
+                     step.status === 'current' ? <Loader2 size={20} className="animate-spin" /> : 
+                     <div className="w-2 h-2 rounded-full bg-slate-300" />}
                   </div>
                   <div className="flex-1 flex justify-between items-center">
-                    <div>
-                      <p className={`font-bold transition-colors ${step.status === 'pending' ? 'text-slate-400' : 'text-slate-900'}`}>{step.label}</p>
-                      {step.status === 'current' && <p className="text-[10px] text-amber font-bold uppercase tracking-wider">In Progress</p>}
-                    </div>
-                    <p className="text-xs font-semibold text-slate-400">{step.date}</p>
+                    <p className={`font-bold ${step.status === 'pending' ? 'text-slate-400' : 'text-slate-900'}`}>{step.label}</p>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{step.time}</span>
                   </div>
                 </div>
               ))}
@@ -117,44 +94,33 @@ const IssueDetail = () => {
           </Card>
 
           {/* Comments Section */}
-          <Card className="p-8 border-none shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-               <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <MessageSquare className="text-indigo" size={24} />
-                Community Activity ({comments.length})
-              </h3>
-            </div>
-            
-            <div className="space-y-6 mb-10">
-              {comments.map((c) => (
-                <div key={c.id} className={`flex gap-4 p-4 rounded-2xl ${c.isOfficial ? 'bg-indigo-light border-l-4 border-indigo' : 'bg-slate-50'}`}>
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0 ${c.isOfficial ? 'bg-indigo' : 'bg-slate-300'}`}>
+          <Card className="p-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-6">Community Comments (3)</h3>
+            <div className="space-y-6 mb-8">
+              {mockComments.map(c => (
+                <div key={c.id} className="flex gap-4">
+                  <div className="w-10 h-10 rounded-full bg-indigo text-white flex items-center justify-center font-bold text-sm shrink-0">
                     {c.initials}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-bold text-sm text-slate-900">{c.name}</span>
-                      {c.isOfficial && <Badge variant="indigo" className="text-[10px] py-0">Official</Badge>}
-                      <span className="text-[10px] text-slate-400 ml-auto font-medium">{c.time}</span>
+                  <div className="flex-1 bg-slate-50 p-4 rounded-2xl">
+                    <div className="flex justify-between mb-1">
+                      <span className="font-bold text-slate-900 text-sm">{c.name}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">{c.time}</span>
                     </div>
                     <p className="text-sm text-slate-600 leading-relaxed">{c.text}</p>
                   </div>
                 </div>
               ))}
             </div>
-
             <div className="flex gap-3">
               <input 
                 type="text" 
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Write a comment..."
-                className="flex-1 px-5 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-indigo/20 font-medium"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Share your thoughts..."
+                className="flex-1 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-indigo/20 text-sm font-medium"
               />
-              <Button 
-                onClick={() => setComment('')}
-                className="px-6 rounded-xl flex items-center gap-2"
-              >
+              <Button onClick={() => setCommentText('')} className="rounded-xl px-6">
                 <Send size={18} />
                 Post
               </Button>
@@ -163,104 +129,99 @@ const IssueDetail = () => {
         </div>
 
         {/* Right Column (40%) */}
-        <div className="lg:w-[35%] space-y-6">
-          {/* Authority Manage Ticket Panel (Conditional) */}
+        <div className="lg:w-[40%] space-y-6">
+          
+          {/* Authority Panel (Conditional) */}
           {role === 'authority' && (
-            <Card className="border-2 border-indigo shadow-xl overflow-hidden">
-               <div className="bg-indigo p-4 flex items-center gap-3 text-white">
+            <Card className="border-2 border-indigo overflow-hidden">
+               <div className="bg-indigo p-4 text-white flex items-center gap-2">
                   <ShieldCheck size={20} />
-                  <span className="font-bold tracking-wide">Authority Control Panel</span>
+                  <span className="font-bold text-sm uppercase tracking-widest">Manage Ticket</span>
                </div>
                <div className="p-6 space-y-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Update Ticket Status</label>
-                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo/20">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Update Status</label>
+                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none">
                       <option>Open</option>
                       <option selected>In Progress</option>
                       <option>Resolved</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Assign Department</label>
-                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo/20">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Reassign Dept</label>
+                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 outline-none">
                       <option selected>Roads & Highways</option>
-                      <option>Public Health</option>
-                      <option>Electricity</option>
+                      <option>Public Works</option>
+                      <option>Traffic Police</option>
                     </select>
                   </div>
-                  <Button className="w-full py-3 font-bold mt-2 shadow-lg shadow-indigo/20">Save Changes</Button>
+                  <Button className="w-full py-4 font-bold">Save Changes</Button>
                </div>
             </Card>
           )}
 
-          {/* Ticket Stats Card */}
-          <Card className="p-8 border-none shadow-sm space-y-8">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Official Status</label>
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <span className="font-bold text-slate-900">In Progress</span>
-                <div className="w-3 h-3 rounded-full bg-amber animate-pulse"></div>
-              </div>
+          {/* Metadata Card */}
+          <Card className="p-6 space-y-6">
+            <div className="flex justify-center">
+               <Badge status="In Progress" className="px-6 py-2 text-sm shadow-sm" />
+            </div>
+            
+            <div className="space-y-4 pt-4 border-t border-slate-50">
+               <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Department</span>
+                  <span className="text-sm font-bold text-slate-700">Roads Dept.</span>
+               </div>
+               <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">SLA Deadline</span>
+                  <div className="flex items-center gap-1.5 text-danger font-bold text-sm">
+                    <Clock size={16} />
+                    Overdue
+                  </div>
+               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Department</p>
-                <p className="text-sm font-bold text-slate-900">Roads Dept.</p>
-              </div>
-              <div className="p-4 bg-danger-light rounded-2xl border border-danger/10">
-                <p className="text-[10px] font-bold text-danger uppercase mb-1">SLA Deadline</p>
-                <div className="flex items-center gap-1 text-sm font-bold text-danger">
-                  <Clock size={14} /> Overdue
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <button 
-                onClick={() => setUpvoted(!upvoted)}
-                className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold transition-all ${
-                  upvoted ? 'bg-indigo text-white shadow-lg shadow-indigo/20' : 'bg-white border-2 border-indigo text-indigo hover:bg-indigo-light'
-                }`}
-              >
-                <ThumbsUp size={20} fill={upvoted ? "white" : "none"} />
-                {upvoted ? 'Upvoted' : 'Upvote This Issue'} (24)
-              </button>
-              <button 
-                onClick={() => setMeToo(!meToo)}
-                className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-bold transition-all ${
-                  meToo ? 'bg-emerald text-white shadow-lg shadow-emerald/20' : 'bg-white border-2 border-emerald text-emerald hover:bg-emerald/5'
-                }`}
-              >
-                <Users size={20} />
-                {meToo ? 'Reported by You Too' : 'Me Too! (8)'}
-              </button>
+            <div className="grid grid-cols-2 gap-3 pt-4">
+               <button 
+                 onClick={() => setUpvoted(!upvoted)}
+                 className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all ${
+                   upvoted ? 'bg-indigo text-white shadow-lg' : 'bg-white border-2 border-indigo text-indigo'
+                 }`}
+               >
+                 <ThumbsUp size={18} fill={upvoted ? "white" : "none"} />
+                 {upvoted ? 'Upvoted' : 'Upvote'} (24)
+               </button>
+               <button 
+                 onClick={() => setMeToo(!meToo)}
+                 className={`py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all ${
+                   meToo ? 'bg-indigo text-white shadow-lg' : 'bg-white border-2 border-indigo text-indigo'
+                 }`}
+               >
+                 <Users size={18} />
+                 {meToo ? 'Me Too!' : 'Me Too'} (8)
+               </button>
             </div>
           </Card>
 
-          {/* Map Location Card */}
-          <Card className="p-6 border-none shadow-sm">
-             <div className="flex items-center justify-between mb-4">
-                <h4 className="font-bold text-slate-900 flex items-center gap-2">
-                  <MapPin className="text-indigo" size={18} />
-                  Exact Location
-                </h4>
-             </div>
-             <div className="rounded-2xl h-40 overflow-hidden mb-4 shadow-inner border border-slate-100">
-                <MapContainer 
-                  center={[20.5937, 78.9629]} 
-                  zoom={15} 
-                  style={{ height: '100%', width: '100%' }}
-                  zoomControl={false}
-                  dragging={false}
-                >
-                  <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-                  <Marker position={[20.5937, 78.9629]} />
-                </MapContainer>
-             </div>
-             <p className="text-xs font-medium text-slate-500 leading-relaxed">
-               Sector 4, MG Road Intersection, Near Central Plaza Mall.
-             </p>
+          {/* Map Card */}
+          <Card className="p-4">
+            <div className="h-40 rounded-xl overflow-hidden mb-4 border border-slate-100">
+              <MapContainer 
+                center={[20.5937, 78.9629]} 
+                zoom={15} 
+                style={{ height: '100%', width: '100%' }}
+                zoomControl={false}
+                dragging={false}
+              >
+                <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+                <Marker position={[20.5937, 78.9629]} />
+              </MapContainer>
+            </div>
+            <div className="flex items-start gap-2">
+               <MapPin className="text-indigo mt-0.5 shrink-0" size={16} />
+               <p className="text-xs font-medium text-slate-500 leading-relaxed">
+                 Sector 4, MG Road Intersection, Near Central Metro Entrance.
+               </p>
+            </div>
           </Card>
         </div>
       </div>
