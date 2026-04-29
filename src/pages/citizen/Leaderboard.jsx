@@ -1,220 +1,238 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Trophy, 
   Crown, 
   Medal, 
   ChevronDown, 
-  Star, 
   Lock,
-  ArrowRight,
-  MapPin,
-  TrendingUp,
+  Hexagon,
   Award,
   Zap,
-  Shield
+  Shield,
+  Star,
+  CheckCircle
 } from 'lucide-react';
-import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
 
 const mockTop3 = [
-  { rank: 1, name: "Ravi Kumar", reports: 142, avatar: "RK", color: "bg-indigo" },
-  { rank: 2, name: "Sita Sharma", reports: 98, avatar: "SS", color: "bg-slate-400" },
-  { rank: 3, name: "Alex Paul", reports: 76, avatar: "AP", color: "bg-amber-600" },
+  { rank: 1, name: "Julian Thorne", reports: 156, avatar: "JT", color: "bg-indigo" },
+  { rank: 2, name: "Elena Vance", reports: 128, avatar: "EV", color: "bg-slate-400" },
+  { rank: 3, name: "Marcus Wright", reports: 112, avatar: "MW", color: "bg-amber-600" },
 ];
 
 const mockRanked = [
-  { rank: 4, name: "Maria Garcia", ward: "Ward 12", reports: 64, resolved: 52, initials: "MG" },
-  { rank: 5, name: "Chen Wei", ward: "Ward 4", reports: 59, resolved: 45, initials: "CW" },
-  { rank: 6, name: "Arjun Singh", ward: "Ward 7", reports: 52, resolved: 38, initials: "AS", isSelf: true },
-  { rank: 7, name: "Fatima B.", ward: "Ward 12", reports: 48, resolved: 30, initials: "FB" },
-  { rank: 8, name: "Kenji S.", ward: "Ward 2", reports: 41, resolved: 28, initials: "KS" },
+  { rank: 4, name: "Sarah Jenkins", ward: "Downtown", submitted: 104, resolved: 98, initials: "SJ", badge: true },
+  { rank: 5, name: "Omar Hassan", ward: "Riverlands", submitted: 89, resolved: 85, initials: "OH", badge: false },
+  { rank: 6, name: "Yuki Tanaka", ward: "Sunset Hill", submitted: 82, resolved: 79, initials: "YT", badge: false },
+  { rank: 7, name: "Fatima Bi", ward: "North Sector", submitted: 76, resolved: 70, initials: "FB", badge: true },
+  { rank: 8, name: "Liam Chen", ward: "Greenwood", submitted: 64, resolved: 58, initials: "LC", badge: false },
+  { rank: 12, name: "Arjun Singh", ward: "Central District", submitted: 24, resolved: 18, initials: "AS", badge: false, isSelf: true },
 ];
 
 const badges = [
-  { name: "Top Reporter", icon: Trophy, desc: "Filed 100+ issues", earned: true },
-  { name: "First Respon.", icon: Zap, desc: "First to report 5 issues", earned: true },
-  { name: "Guardian", icon: Shield, desc: "Ward resolved 50+ issues", earned: false },
-  { name: "Expert Eye", icon: Star, desc: "10 correct AI tags", earned: false },
-  { name: "Community King", icon: Award, desc: "Voted top of ward", earned: false },
+  { name: "First Report", icon: Zap, desc: "Submitted your very first civic issue report.", earned: true },
+  { name: "Street Warrior", icon: Shield, desc: "10 safety hazards identified and reported.", earned: true },
+  { name: "10 Resolved", icon: CheckCircle, desc: "Have 10 of your reports marked as resolved.", earned: false },
+  { name: "Community Hero", icon: Award, desc: "Voted top contributor in your ward.", earned: false },
+  { name: "Top Reporter", icon: Trophy, desc: "Filed 100+ reports for the city.", earned: false },
 ];
 
+// Simple component for Hexagonal-ish icon
+const BadgeIcon = ({ icon: Icon, earned }) => (
+  <div className={`relative w-12 h-12 flex items-center justify-center rounded-lg ${earned ? 'bg-indigo text-white' : 'bg-slate-200 text-slate-400'}`}>
+    <Icon size={24} />
+    {!earned && (
+      <div className="absolute inset-0 flex items-center justify-center bg-black/10 rounded-lg">
+        <Lock size={14} className="text-white" />
+      </div>
+    )}
+  </div>
+);
+
 const Leaderboard = () => {
+  const navigate = useNavigate();
   const [ward, setWard] = useState('City Wide');
 
   return (
-    <div className="min-h-screen bg-background py-10 px-6 lg:px-12 pb-32">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center text-indigo">
-              <Trophy size={24} />
-            </div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Community Leaderboard</h1>
-          </div>
-          
-          <div className="relative w-full md:w-auto">
-             <select 
-               value={ward} 
-               onChange={(e) => setWard(e.target.value)}
-               className="w-full md:w-48 pl-4 pr-10 py-3 bg-white border border-slate-100 rounded-xl font-bold text-slate-700 outline-none shadow-sm appearance-none"
-             >
-               <option>City Wide</option>
-               <option>Ward 4</option>
-               <option>Ward 12</option>
-             </select>
-             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-          </div>
+    <div className="min-h-screen bg-background pb-24">
+      {/* Header Section */}
+      <div className="px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-3">
+          <Trophy className="text-amber-500" size={32} />
+          <h1 className="text-3xl font-bold text-slate-900">Community Leaderboard</h1>
         </div>
-
-        {/* Podium Section */}
-        <div className="flex flex-row items-end justify-center gap-4 mb-16 px-4">
-           {/* 2nd Place */}
-           <div className="flex flex-col items-center flex-1 max-w-[120px]">
-              <div className="w-14 h-14 rounded-full bg-slate-100 border-2 border-slate-200 flex items-center justify-center font-bold text-slate-400 mb-2 relative">
-                {mockTop3[1].avatar}
-                <div className="absolute -top-4 -right-2 w-8 h-8 rounded-full bg-slate-400 text-white border-2 border-white flex items-center justify-center">
-                   <Medal size={16} />
-                </div>
-              </div>
-              <div className="w-full h-24 bg-slate-400 rounded-t-2xl shadow-xl flex flex-col items-center justify-center p-2 text-white">
-                 <span className="text-2xl font-bold italic">2nd</span>
-              </div>
-              <div className="text-center mt-3">
-                 <p className="font-bold text-xs text-slate-900 truncate w-full">{mockTop3[1].name}</p>
-                 <p className="text-[10px] text-slate-500 font-bold">{mockTop3[1].reports} reports</p>
-              </div>
-           </div>
-
-           {/* 1st Place */}
-           <div className="flex flex-col items-center flex-1 max-w-[140px] -mb-4">
-              <div className="w-16 h-16 rounded-full bg-indigo-light border-4 border-indigo/20 flex items-center justify-center font-bold text-indigo mb-2 relative shadow-2xl">
-                {mockTop3[0].avatar}
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-amber animate-bounce">
-                   <Crown size={32} fill="currentColor" />
-                </div>
-              </div>
-              <div className="w-full h-36 bg-indigo rounded-t-2xl shadow-2xl shadow-indigo/30 flex flex-col items-center justify-center p-2 text-white border-x-4 border-t-4 border-white/10">
-                 <span className="text-4xl font-black italic mb-1">1st</span>
-                 <TrendingUp size={24} className="text-indigo-light opacity-50" />
-              </div>
-              <div className="text-center mt-5">
-                 <p className="font-bold text-sm text-slate-900 truncate w-full">{mockTop3[0].name}</p>
-                 <p className="text-xs text-indigo font-bold">{mockTop3[0].reports} reports</p>
-              </div>
-           </div>
-
-           {/* 3rd Place */}
-           <div className="flex flex-col items-center flex-1 max-w-[120px]">
-              <div className="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-100 flex items-center justify-center font-bold text-amber-600 mb-2 relative">
-                {mockTop3[2].avatar}
-                <div className="absolute -top-4 -right-2 w-8 h-8 rounded-full bg-amber-600 text-white border-2 border-white flex items-center justify-center">
-                   <Medal size={16} />
-                </div>
-              </div>
-              <div className="w-full h-20 bg-amber-600 rounded-t-2xl shadow-xl flex flex-col items-center justify-center p-2 text-white">
-                 <span className="text-xl font-bold italic">3rd</span>
-              </div>
-              <div className="text-center mt-3">
-                 <p className="font-bold text-xs text-slate-900 truncate w-full">{mockTop3[2].name}</p>
-                 <p className="text-[10px] text-slate-500 font-bold">{mockTop3[2].reports} reports</p>
-              </div>
-           </div>
-        </div>
-
-        {/* Ranked List */}
-        <Card className="overflow-hidden border-none shadow-sm mb-12">
-           <div className="divide-y divide-slate-50">
-             {mockRanked.map((user) => (
-               <div 
-                 key={user.rank} 
-                 className={`flex items-center gap-4 p-5 hover:bg-slate-50 transition-colors ${user.isSelf ? 'bg-indigo-light/50 border-l-4 border-indigo' : ''}`}
-               >
-                 <div className="w-8 font-black text-slate-300 text-lg">#{user.rank}</div>
-                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs ${user.isSelf ? 'bg-indigo' : 'bg-slate-300'}`}>
-                   {user.initials}
-                 </div>
-                 <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-900 truncate flex items-center gap-2">
-                      {user.name}
-                      {user.isSelf && <span className="text-[10px] bg-indigo text-white px-1.5 py-0.5 rounded-md">You</span>}
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{user.ward}</p>
-                 </div>
-                 <div className="text-right">
-                    <p className="font-black text-slate-900 leading-none">{user.reports}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">Reports</p>
-                 </div>
-                 <div className="h-8 w-px bg-slate-100 mx-2"></div>
-                 <div className="text-right">
-                    <p className="font-black text-emerald leading-none">{user.resolved}</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">Fixed</p>
-                 </div>
-                 <div className="ml-4 text-amber opacity-40">
-                   <Trophy size={18} />
-                 </div>
-               </div>
-             ))}
-           </div>
-        </Card>
-
-        {/* Badges Section */}
-        <div className="mb-8 flex items-center justify-between">
-           <h3 className="text-xl font-bold text-slate-900">Badges You Can Earn</h3>
-           <Button variant="secondary" className="py-1 px-3 text-xs">View All</Button>
-        </div>
-        <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide">
-           {badges.map((b, i) => (
-             <div key={i} className="flex-shrink-0 w-40 text-center relative group">
-                <div className={`w-24 h-24 mx-auto rounded-[2rem] flex items-center justify-center mb-4 transition-all ${b.earned ? 'bg-indigo shadow-xl shadow-indigo/20 scale-105' : 'bg-slate-100 opacity-50 grayscale'}`}>
-                   <b.icon size={32} className="text-white" />
-                   {!b.earned && (
-                     <div className="absolute inset-0 flex items-center justify-center text-slate-900">
-                        <Lock size={20} />
-                     </div>
-                   )}
-                </div>
-                <h4 className="font-bold text-sm text-slate-900 mb-1">{b.name}</h4>
-                <p className="text-[10px] text-slate-400 font-medium px-2">{b.desc}</p>
-             </div>
-           ))}
+        
+        <div className="relative">
+          <select 
+            value={ward} 
+            onChange={(e) => setWard(e.target.value)}
+            className="appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2 pr-10 font-semibold text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo/20 transition-all cursor-pointer"
+          >
+            <option>City Wide</option>
+            <option>Downtown</option>
+            <option>Riverlands</option>
+            <option>Sunset Hill</option>
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
         </div>
       </div>
 
-      {/* Sticky Bottom Rank Card */}
-      <div className="fixed bottom-0 left-0 right-0 z-[2000] bg-white border-t border-slate-100 shadow-2xl p-4 md:px-12 flex items-center justify-between max-w-7xl mx-auto rounded-t-[2.5rem]">
-         <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-indigo text-white flex flex-col items-center justify-center">
-               <span className="text-[10px] font-bold uppercase">Rank</span>
-               <span className="text-xl font-black leading-none">#6</span>
+      {/* Podium Section */}
+      <div className="flex items-end justify-center gap-2 md:gap-8 mb-12 px-4">
+        {/* 2nd Place */}
+        <div className="flex flex-col items-center flex-1 max-w-[120px]">
+          <div className="relative mb-2">
+            <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold border-2 border-white shadow-sm overflow-hidden">
+               <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${mockTop3[1].name}`} alt="avatar" />
             </div>
-            <div>
-               <p className="font-bold text-slate-900">Your Standing: <span className="text-indigo">Expert Reporter</span></p>
-               <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
-                  52 reports · 7 day streak 🔥
-               </p>
+            <div className="absolute -top-3 -right-1 text-slate-400 drop-shadow-md">
+              <Medal size={24} />
             </div>
-         </div>
-         
-         <div className="flex-1 max-w-xs mx-8 hidden md:block">
-            <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400 mb-1.5">
-               <span>Next Rank: Master</span>
-               <span>8/20 more</span>
-            </div>
-            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-               <div className="w-2/5 h-full bg-indigo rounded-full shadow-[0_0_8px_rgba(55,48,163,0.4)]"></div>
-            </div>
-         </div>
+            <div className="absolute -bottom-1 right-0 w-6 h-6 rounded-full bg-slate-400 text-white flex items-center justify-center text-[10px] font-bold border-2 border-white">2</div>
+          </div>
+          <div className="w-full h-24 bg-slate-400 rounded-t-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+            2nd
+          </div>
+          <div className="text-center mt-3">
+            <p className="font-bold text-slate-900 text-sm">{mockTop3[1].name}</p>
+            <p className="text-xs text-slate-500">{mockTop3[1].reports} reports</p>
+          </div>
+        </div>
 
-         <Button 
-           variant="primary" 
-           className="px-8 py-3 font-bold"
-           onClick={() => navigate('/report')}
-         >
-           New Report
-         </Button>
+        {/* 1st Place */}
+        <div className="flex flex-col items-center flex-1 max-w-[140px]">
+          <div className="relative mb-2">
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-amber-500">
+              <Crown size={40} className="drop-shadow-lg" />
+            </div>
+            <div className="w-20 h-20 rounded-full bg-indigo-light flex items-center justify-center text-indigo font-bold border-4 border-white shadow-xl overflow-hidden ring-4 ring-indigo/10">
+               <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${mockTop3[0].name}`} alt="avatar" />
+            </div>
+            <div className="absolute -bottom-1 right-0 w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold border-2 border-white">1</div>
+          </div>
+          <div className="w-full h-32 bg-indigo rounded-t-xl flex items-center justify-center text-white font-bold text-2xl shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/10 to-transparent pointer-events-none"></div>
+            1st
+          </div>
+          <div className="text-center mt-3">
+            <p className="font-bold text-slate-900 text-base">{mockTop3[0].name}</p>
+            <p className="text-sm text-indigo font-semibold">{mockTop3[0].reports} reports resolved</p>
+          </div>
+        </div>
+
+        {/* 3rd Place */}
+        <div className="flex flex-col items-center flex-1 max-w-[120px]">
+          <div className="relative mb-2">
+            <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 font-bold border-2 border-white shadow-sm overflow-hidden">
+               <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${mockTop3[2].name}`} alt="avatar" />
+            </div>
+            <div className="absolute -top-3 -right-1 text-amber-700/60 drop-shadow-md">
+              <Medal size={24} />
+            </div>
+            <div className="absolute -bottom-1 right-0 w-6 h-6 rounded-full bg-amber-600 text-white flex items-center justify-center text-[10px] font-bold border-2 border-white">3</div>
+          </div>
+          <div className="w-full h-20 bg-amber-600 rounded-t-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
+            3rd
+          </div>
+          <div className="text-center mt-3">
+            <p className="font-bold text-slate-900 text-sm">{mockTop3[2].name}</p>
+            <p className="text-xs text-slate-500">{mockTop3[2].reports} reports</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Ranked List Section */}
+      <div className="px-6 mb-12">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-50/50 border-b border-slate-100">
+              <tr>
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-20 text-center">Rank</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Citizen</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider hidden md:table-cell">Ward</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Submitted</th>
+                <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Resolved</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {mockRanked.map((user) => (
+                <tr 
+                  key={user.rank} 
+                  className={`hover:bg-slate-50/50 transition-colors ${user.isSelf ? 'bg-indigo-light/30' : ''}`}
+                >
+                  <td className="px-6 py-4 text-center font-bold text-slate-400">#{user.rank}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs ${user.isSelf ? 'bg-indigo' : 'bg-slate-300'}`}>
+                        {user.initials}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900 flex items-center gap-2">
+                          {user.name}
+                          {user.badge && <Trophy size={14} className="text-amber-500" />}
+                        </p>
+                        <p className="text-[10px] text-slate-500 md:hidden">{user.ward}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-500 hidden md:table-cell">{user.ward}</td>
+                  <td className="px-6 py-4 text-center font-bold text-indigo">{user.submitted}</td>
+                  <td className="px-6 py-4 text-center font-bold text-slate-900">{user.resolved}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Badges Section */}
+      <div className="px-6 mb-12">
+        <h3 className="text-xl font-bold text-slate-900 mb-6">Badges You Can Earn</h3>
+        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+          {badges.map((b, i) => (
+            <div 
+              key={i} 
+              className={`flex-shrink-0 w-36 bg-white border border-slate-100 rounded-xl p-4 flex flex-col items-center text-center shadow-sm transition-all ${!b.earned ? 'opacity-70' : ''}`}
+            >
+              <div className={!b.earned ? 'grayscale' : ''}>
+                <BadgeIcon icon={b.icon} earned={b.earned} />
+              </div>
+              <p className="mt-3 font-bold text-slate-900 text-xs leading-tight">{b.name}</p>
+              <p className="mt-1 text-[10px] text-slate-400 leading-tight line-clamp-2">{b.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Sticky Rank Card */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 shadow-[0_-8px_20px_-5px_rgba(0,0,0,0.1)] flex items-center justify-between z-50">
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col">
+            <span className="text-indigo font-bold text-lg">Your Rank: #12</span>
+            <span className="text-xs text-slate-500 font-medium">24 reports · 7 day streak 🔥</span>
+          </div>
+        </div>
+        
+        <div className="flex-1 max-w-xs mx-8">
+          <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1 capitalize">
+            <span>Progress to next rank</span>
+            <span>75%</span>
+          </div>
+          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div className="w-3/4 h-full bg-indigo rounded-full"></div>
+          </div>
+        </div>
+
+        <button 
+          onClick={() => navigate('/report')}
+          className="bg-indigo text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-indigo-dark transition-all shadow-md active:scale-95"
+        >
+          Rise Up
+        </button>
       </div>
     </div>
   );
 };
 
 export default Leaderboard;
+

@@ -4,21 +4,18 @@ import {
   CheckCircle, 
   Settings, 
   Info, 
-  BellOff, 
-  X,
-  Bell,
-  ChevronRight,
-  Circle
+  BellOff
 } from 'lucide-react';
-import Card from '../../components/ui/Card';
 
 const initialNotifications = [
-  { id: 1, message: "Issue Resolved", subtext: "Your report on Pothole at MG Road is now resolved.", type: 'resolved', read: false, date: "Today", time: "2m ago" },
-  { id: 2, message: "Assigned to Department", subtext: "Streetlight issue in Ward 12 was assigned to Electricity Dept.", type: 'assigned', read: false, date: "Today", time: "1h ago" },
-  { id: 3, message: "In Progress", subtext: "Cleanup crew is currently at the site in Ward 7.", type: 'in-progress', read: true, date: "Today", time: "4h ago" },
-  { id: 4, message: "Resolution Pending", subtext: "Verification needed for Garbage removal in Sector 4.", type: 'assigned', read: true, date: "Yesterday", time: "1d ago" },
-  { id: 5, message: "Issue Resolved", subtext: "Water leak near Park St. has been fixed successfully.", type: 'resolved', read: true, date: "Yesterday", time: "1d ago" },
-  { id: 6, message: "Profile Updated", subtext: "You earned the 'Civic Hero' badge for 10 reports!", type: 'info', read: true, date: "This Week", time: "3d ago" },
+  { id: 1, message: "Your pothole report on MG Road has been resolved", subtext: "MG Road, Central District", time: "2 hours ago", type: 'resolved', read: false, dateGroup: "Today" },
+  { id: 2, message: "New team assigned to broken streetlight near Park Ave", subtext: "Park Ave, North Sector", time: "5 hours ago", type: 'assigned', read: false, dateGroup: "Today" },
+  { id: 3, message: "Maintenance is in-progress for the reported water leakage", subtext: "Greenwood Circle", time: "1 day ago", type: 'in-progress', read: true, dateGroup: "Yesterday" },
+  { id: 4, message: "Waste collection request for Zone 4 completed", subtext: "Zone 4 Industrial Area", time: "1 day ago", type: 'resolved', read: true, dateGroup: "Yesterday" },
+  { id: 5, message: "Your account was logged in from a new device", subtext: "Web Browser, Mumbai", time: "3 days ago", type: 'assigned', read: true, dateGroup: "This Week" },
+  { id: 6, message: "Emergency repair scheduled for water main break", subtext: "Downing St", time: "4 days ago", type: 'in-progress', read: true, dateGroup: "This Week" },
+  { id: 7, message: "Community cleanup drive starting in your area", subtext: "Sector 5 Park", time: "5 days ago", type: 'assigned', read: true, dateGroup: "This Week" },
+  { id: 8, message: "Scheduled maintenance for electrical grid completed", subtext: "North Block", time: "6 days ago", type: 'resolved', read: true, dateGroup: "This Week" },
 ];
 
 const Notifications = () => {
@@ -29,7 +26,7 @@ const Notifications = () => {
     setNotifications(notifications.map(n => ({ ...n, read: true })));
   };
 
-  const markAsRead = (id) => {
+  const handleNotificationClick = (id) => {
     setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
     navigate('/issues/1');
   };
@@ -38,71 +35,82 @@ const Notifications = () => {
 
   const getIcon = (type) => {
     switch (type) {
-      case 'resolved': return <CheckCircle className="text-emerald" size={20} />;
-      case 'in-progress': return <Settings className="text-amber animate-spin-slow" size={20} />;
-      case 'assigned': return <Info className="text-indigo" size={20} />;
-      default: return <Bell className="text-slate-400" size={20} />;
+      case 'resolved':
+        return (
+          <div className="w-10 h-10 rounded-full bg-emerald/10 flex items-center justify-center text-emerald">
+            <CheckCircle size={20} />
+          </div>
+        );
+      case 'in-progress':
+        return (
+          <div className="w-10 h-10 rounded-full bg-amber/10 flex items-center justify-center text-amber">
+            <Settings size={20} />
+          </div>
+        );
+      case 'assigned':
+        return (
+          <div className="w-10 h-10 rounded-full bg-indigo/10 flex items-center justify-center text-indigo">
+            <Info size={20} />
+          </div>
+        );
+      default:
+        return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-background py-10 px-6">
+    <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-10">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center text-indigo">
-              <Bell size={24} />
-            </div>
-            <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
-          </div>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
           <button 
             onClick={markAllAsRead}
-            className="text-sm font-bold text-indigo hover:underline"
+            className="text-sm font-semibold text-indigo hover:text-indigo-dark transition-colors"
           >
             Mark all as read
           </button>
         </div>
 
         {notifications.length > 0 ? (
-          <div className="space-y-10">
+          <div className="space-y-8">
             {groups.map(group => {
-              const groupItems = notifications.filter(n => n.date === group);
+              const groupItems = notifications.filter(n => n.dateGroup === group);
               if (groupItems.length === 0) return null;
 
               return (
                 <div key={group} className="space-y-4">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] ml-2">{group}</h3>
-                  <div className="space-y-3">
-                    {groupItems.map(n => (
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{group}</h3>
+                  <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+                    {groupItems.map((n, idx) => (
                       <div 
                         key={n.id}
-                        onClick={() => markAsRead(n.id)}
-                        className={`group relative flex items-start gap-4 p-5 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
-                          n.read 
-                          ? 'bg-white border-slate-100 opacity-80' 
-                          : 'bg-indigo-light border-indigo/20 shadow-sm'
+                        onClick={() => handleNotificationClick(n.id)}
+                        className={`relative flex items-center gap-4 p-5 cursor-pointer transition-all border-b border-slate-50 last:border-b-0 hover:bg-slate-50/50 ${
+                          !n.read ? 'bg-indigo-light border-l-4 border-l-indigo' : 'bg-white'
                         }`}
                       >
-                        {!n.read && <div className="absolute top-5 right-5 w-2.5 h-2.5 bg-indigo rounded-full shadow-sm"></div>}
-                        {!n.read && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-indigo rounded-r-full"></div>}
-                        
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${n.read ? 'bg-slate-50' : 'bg-white shadow-sm'}`}>
+                        <div className="flex-shrink-0">
                           {getIcon(n.type)}
                         </div>
                         
-                        <div className="flex-1 min-w-0 pr-4">
-                          <div className="flex justify-between items-start mb-1">
-                             <h4 className={`font-bold text-sm truncate transition-colors ${n.read ? 'text-slate-600' : 'text-slate-900 group-hover:text-indigo'}`}>
-                               {n.message}
-                             </h4>
-                             <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap ml-4">{n.time}</span>
-                          </div>
-                          <p className="text-xs text-slate-500 leading-relaxed font-medium">{n.subtext}</p>
+                        <div className="flex-1 min-w-0 pr-12">
+                          <h4 className={`text-sm font-bold truncate ${n.read ? 'text-slate-700' : 'text-slate-900'}`}>
+                            {n.message}
+                          </h4>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {n.subtext}
+                          </p>
                         </div>
 
-                        <div className="flex items-center text-slate-300 group-hover:text-indigo transition-colors self-center">
-                          <ChevronRight size={18} />
+                        <div className="flex-shrink-0 text-right">
+                          <span className="text-[10px] font-medium text-slate-400">
+                            {n.time}
+                          </span>
                         </div>
+
+                        {!n.read && (
+                          <div className="absolute top-4 right-4 w-2 h-2 bg-indigo rounded-full"></div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -111,12 +119,14 @@ const Notifications = () => {
             })}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[2.5rem] shadow-sm border border-slate-100">
-             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-6">
-                <BellOff size={40} />
-             </div>
-             <h3 className="text-2xl font-bold text-slate-900 mb-2">No notifications yet</h3>
-             <p className="text-slate-500 max-w-xs text-center">We'll notify you when your reports are assigned or resolved.</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-4">
+              <BellOff size={32} />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">No notifications yet</h3>
+            <p className="text-slate-500 mt-2 max-w-xs">
+              We'll notify you when there's an update on your reported issues or community activity.
+            </p>
           </div>
         )}
       </div>
@@ -125,3 +135,4 @@ const Notifications = () => {
 };
 
 export default Notifications;
+
