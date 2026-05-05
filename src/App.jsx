@@ -33,6 +33,8 @@ import Departments from './pages/authority/Departments';
 import AccountabilityFeed from './pages/public/AccountabilityFeed';
 import WardReport from './pages/public/WardReport';
 
+import ToastContainer from './components/ui/ToastContainer';
+
 const App = () => {
   const { token, role } = useAuthStore();
 
@@ -43,6 +45,7 @@ const App = () => {
 
   return (
     <Router>
+      <ToastContainer />
       <div className="min-h-screen bg-background">
         {showPublicNavbar && <PublicNavbar />}
         {showMainNavbar && <Navbar />}

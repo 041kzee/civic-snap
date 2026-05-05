@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Camera, 
   Upload, 
@@ -10,29 +10,75 @@ import {
   ChevronDown,
   Star,
   Loader2,
-  Info
+  Info,
+  AlertTriangle,
+  CheckCircle
 } from 'lucide-react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import useToast from '../../hooks/useToast';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
+import issueService from '../../services/issueService';
+import departmentService from '../../services/departmentService';
+
+// Helper component to center map on coordinates
+const RecenterMap = ({ coords }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (coords.lat && coords.lng) {
+      map.setView([coords.lat, coords.lng], 15);
+    }
+  }, [coords, map]);
+  return null;
+};
 
 const ReportIssue = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [image, setImage] = useState(null);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [duplicateIssue, setDuplicateIssue] = useState(null);
+  
+  const [coords, setCoords] = useState({ lat: 20.5937, lng: 78.9629 });
+  const [departments, setDepartments] = useState([]);
+  const [formData, setFormData] = useState({
+    category: 'pothole',
+    severity: 3,
+    description: '',
+    ward: 'Ward 1',
+    department: ''
+  });
+
+  // Fetch Departments and GPS
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const depts = await departmentService.getDepartments();
+        setDepartments(depts);
+      } catch (err) {
+        console.error('Failed to load departments');
+      }
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          (err) => console.warn('Geolocation denied', err)
+        );
+      }
+    };
+    init();
+  }, []);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImage(reader.result);
-        setAnalyzing(true);
-        // Simulate AI analysis
-        setTimeout(() => setAnalyzing(false), 2000);
       };
       reader.readAsDataURL(file);
     }
@@ -40,16 +86,49 @@ const ReportIssue = () => {
 
   const removeImage = () => {
     setImage(null);
-    setAnalyzing(false);
+    setImageFile(null);
+    setDuplicateIssue(null);
   };
 
-  const handleSubmit = (e) => {
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    setDuplicateIssue(null);
+
+    const submissionData = new FormData();
+    submissionData.append('image', imageFile);
+    submissionData.append('latitude', coords.lat);
+    submissionData.append('longitude', coords.lng);
+    submissionData.append('category', formData.category);
+    submissionData.append('severity', formData.severity);
+    submissionData.append('description', formData.description);
+    submissionData.append('ward', formData.ward);
+    if (formData.department) {
+      submissionData.append('department', formData.department);
+    }
+    submissionData.append('anonymous', isAnonymous);
+
+    try {
+      const response = await issueService.createIssue(submissionData);
+      
+      if (response.duplicate) {
+        setDuplicateIssue(response.existingIssue);
+        showToast('A similar issue was already reported here.', 'warning');
+        setLoading(false);
+        return;
+      }
+
+      showToast('Report submitted successfully! AI analysis completed.', 'success');
+      navigate('/map');
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to submit report.', 'error');
+    } finally {
       setLoading(false);
-      navigate('/my-reports');
-    }, 2000);
+    }
   };
 
   return (
@@ -61,6 +140,27 @@ const ReportIssue = () => {
           </div>
           <h1 className="text-3xl font-bold text-slate-900">Report a Civic Issue</h1>
         </div>
+
+
+        {duplicateIssue && (
+          <div className="mb-6 p-6 bg-amber-50 border border-amber-200 rounded-2xl flex gap-4 animate-in slide-in-from-top-4 duration-300">
+            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 flex-shrink-0">
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <h4 className="text-lg font-bold text-slate-900">Possible Duplicate Found</h4>
+              <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+                A similar issue was recently reported in this exact area. To help our team focus on resolution, please check if this is the same issue before reporting again.
+              </p>
+              <Link 
+                to={`/issues/${duplicateIssue._id}`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 transition-colors"
+              >
+                View Existing Report
+              </Link>
+            </div>
+          </div>
+        )}
 
         <Card className="p-0 overflow-hidden border-none shadow-xl">
           <form onSubmit={handleSubmit}>
@@ -99,54 +199,17 @@ const ReportIssue = () => {
 
             <div className="h-px bg-slate-100"></div>
 
-            {/* AI Analysis Result (Conditional) */}
+            {/* AI Analysis Result (Placeholder until submitted) */}
             {image && (
               <div className="p-8 bg-slate-50/50">
-                <div className={`rounded-2xl border-2 border-indigo bg-white p-6 relative overflow-hidden transition-all duration-500 ${analyzing ? 'opacity-60 grayscale' : 'opacity-100'}`}>
-                  {analyzing && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-[1px] z-10">
-                       <div className="flex flex-col items-center gap-3">
-                         <Loader2 className="animate-spin text-indigo" size={32} />
-                         <span className="text-sm font-bold text-indigo">AI Analyzing...</span>
-                       </div>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-indigo-light rounded-lg text-indigo">
-                        <Sparkles size={18} />
-                      </div>
-                      <span className="font-bold text-indigo tracking-tight text-lg">AI Analysis Result</span>
-                    </div>
-                    <Badge status="Resolved">Verified</Badge>
+                <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 p-6 flex flex-col items-center justify-center text-center">
+                  <div className="p-3 bg-slate-100 rounded-full text-slate-400 mb-4">
+                    <Sparkles size={24} />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Category Detected</p>
-                      <Badge variant="indigo">Pothole / Road Damage</Badge>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Severity Score</p>
-                      <div className="flex gap-1 text-amber">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star key={star} size={16} fill={star <= 4 ? "currentColor" : "none"} strokeWidth={2.5} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">AI Description</p>
-                    <p className="text-sm text-slate-600 italic leading-relaxed">
-                      "Image shows significant asphalt degradation with visible water accumulation. Likely a high-priority repair needed to prevent further structural damage."
-                    </p>
-                  </div>
-                  
-                  <div className="mt-4 flex items-center gap-2 text-[10px] text-slate-400 italic">
-                    <Info size={12} />
-                    You can manually override these detections below.
-                  </div>
+                  <h4 className="font-bold text-slate-700 mb-1">AI Analysis Pending</h4>
+                  <p className="text-xs text-slate-400 max-w-[280px]">
+                    Our AI model will analyze your photo for categorization and severity once you submit.
+                  </p>
                 </div>
               </div>
             )}
@@ -158,26 +221,35 @@ const ReportIssue = () => {
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Location Detection</label>
               <div className="rounded-2xl h-48 bg-slate-100 overflow-hidden mb-4 relative shadow-inner border border-slate-100">
                 <MapContainer 
-                  center={[20.5937, 78.9629]} 
+                  center={[coords.lat, coords.lng]} 
                   zoom={15} 
                   style={{ height: '100%', width: '100%' }}
                   zoomControl={false}
-                  dragging={false}
-                  scrollWheelZoom={false}
+                  dragging={true}
                 >
                   <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-                  <Marker position={[20.5937, 78.9629]} />
+                  <Marker position={[coords.lat, coords.lng]} />
+                  <RecenterMap coords={coords} />
                 </MapContainer>
-                <div className="absolute inset-0 bg-transparent pointer-events-none"></div>
               </div>
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2 text-emerald">
                   <div className="w-5 h-5 rounded-full bg-emerald/10 flex items-center justify-center">
                     <Check size={12} strokeWidth={4} />
                   </div>
-                  <span className="text-sm font-bold">Auto-detected from GPS</span>
+                  <span className="text-sm font-bold">Location pinned from GPS</span>
                 </div>
-                <button type="button" className="text-sm font-bold text-indigo hover:underline">Change Location</button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    const lat = prompt('Enter Latitude', coords.lat);
+                    const lng = prompt('Enter Longitude', coords.lng);
+                    if (lat && lng) setCoords({ lat: parseFloat(lat), lng: parseFloat(lng) });
+                  }}
+                  className="text-sm font-bold text-indigo hover:underline"
+                >
+                  Edit Manually
+                </button>
               </div>
             </div>
 
@@ -189,11 +261,18 @@ const ReportIssue = () => {
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Category</label>
                   <div className="relative">
-                    <select className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-xl font-semibold text-slate-700 appearance-none outline-none focus:ring-2 focus:ring-indigo/20">
-                      <option>Road Damage</option>
-                      <option>Waste Management</option>
-                      <option>Lighting</option>
-                      <option>Water Leak</option>
+                    <select 
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-xl font-semibold text-slate-700 appearance-none outline-none focus:ring-2 focus:ring-indigo/20"
+                    >
+                      <option value="pothole">Pothole</option>
+                      <option value="streetlight">Street Light</option>
+                      <option value="garbage">Garbage</option>
+                      <option value="manhole">Manhole</option>
+                      <option value="waterlogging">Waterlogging</option>
+                      <option value="other">Other</option>
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
                   </div>
@@ -201,7 +280,12 @@ const ReportIssue = () => {
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Severity (1-5)</label>
                   <div className="relative">
-                    <select className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-xl font-semibold text-slate-700 appearance-none outline-none focus:ring-2 focus:ring-indigo/20">
+                    <select 
+                      name="severity"
+                      value={formData.severity}
+                      onChange={handleInputChange}
+                      className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-xl font-semibold text-slate-700 appearance-none outline-none focus:ring-2 focus:ring-indigo/20"
+                    >
                       {[1, 2, 3, 4, 5].map(v => <option key={v} value={v}>{v}</option>)}
                     </select>
                     <Star className="absolute right-4 top-1/2 -translate-y-1/2 text-amber pointer-events-none" size={18} />
@@ -212,21 +296,49 @@ const ReportIssue = () => {
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Description (Optional)</label>
                 <textarea 
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
                   rows={4}
                   placeholder="Describe the issue in detail..."
                   className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo/20 resize-none"
                 ></textarea>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Ward</label>
-                <div className="relative">
-                  <select className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-xl font-semibold text-slate-700 appearance-none outline-none focus:ring-2 focus:ring-indigo/20">
-                    <option>Ward 4 - Green Valley</option>
-                    <option>Ward 12 - Downtown</option>
-                    <option>Ward 7 - West Coast</option>
-                  </select>
-                  <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Ward</label>
+                  <div className="relative">
+                    <select 
+                      name="ward"
+                      value={formData.ward}
+                      onChange={handleInputChange}
+                      className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-xl font-semibold text-slate-700 appearance-none outline-none focus:ring-2 focus:ring-indigo/20"
+                    >
+                      <option value="Ward 1">Ward 1 - Green Valley</option>
+                      <option value="Ward 4">Ward 4 - Riverside</option>
+                      <option value="Ward 7">Ward 7 - West Coast</option>
+                      <option value="Ward 12">Ward 12 - Downtown</option>
+                    </select>
+                    <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Suggested Department</label>
+                  <div className="relative">
+                    <select 
+                      name="department"
+                      value={formData.department}
+                      onChange={handleInputChange}
+                      className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-xl font-semibold text-slate-700 appearance-none outline-none focus:ring-2 focus:ring-indigo/20"
+                    >
+                      <option value="">Auto-detect (AI)</option>
+                      {departments.map(dept => (
+                        <option key={dept._id} value={dept._id}>{dept.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                  </div>
                 </div>
               </div>
 
@@ -252,11 +364,17 @@ const ReportIssue = () => {
             <div className="p-8 bg-slate-50 border-t border-slate-100">
                <Button 
                  type="submit" 
-                 disabled={loading || !image}
+                 disabled={loading || !imageFile || success}
                  className="w-full py-4 text-lg font-bold shadow-xl shadow-indigo/20 flex items-center justify-center gap-3"
                >
-                 {loading && <Loader2 className="animate-spin" size={24} />}
-                 Submit Report
+                 {loading ? (
+                   <>
+                     <Loader2 className="animate-spin" size={24} />
+                     Submitting & Analyzing...
+                   </>
+                 ) : (
+                   'Submit Report'
+                 )}
                </Button>
                <p className="text-center text-xs text-slate-400 mt-4 font-medium italic">
                  Your report will be live on the map within seconds.

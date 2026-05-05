@@ -14,11 +14,15 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import Button from '../components/ui/Button';
+import authService from '../services/authService';
+
+import useToast from '../hooks/useToast';
 
 const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { setUser } = useAuthStore();
+  const { showToast } = useToast();
   
   // URL params can specify starting mode
   const searchParams = new URLSearchParams(location.search);
@@ -28,6 +32,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState('citizen');
+  const [validationErrors, setValidationErrors] = useState({});
 
   const [formData, setFormData] = useState({
     name: '',
@@ -38,31 +43,69 @@ const Auth = () => {
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    // Clear validation error when user types
+    if (validationErrors[e.target.name]) {
+      setValidationErrors({ ...validationErrors, [e.target.name]: '' });
+    }
   };
 
-  const handleSubmit = (e) => {
+  const validate = () => {
+    const errors = {};
+    if (mode === 'register' && !formData.name.trim()) errors.name = 'Name is required';
+    if (!formData.email.trim()) errors.email = 'Email is required';
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
+    }
+    
+    if (mode === 'register' && formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validate()) return;
+    
     setLoading(true);
 
-    // Mock authentication process
-    setTimeout(() => {
-      const mockUser = {
-        id: '123',
-        name: mode === 'register' ? formData.name : 'John Doe',
-        email: formData.email,
-        role: role
-      };
-      const mockToken = 'mock-jwt-token-12345';
+    try {
+      let response;
+      if (mode === 'register') {
+        response = await authService.register(
+          formData.name,
+          formData.email,
+          formData.password,
+          role
+        );
+        showToast('Account created successfully!', 'success');
+      } else {
+        response = await authService.login(formData.email, formData.password);
+        showToast(`Welcome back, ${response.user.name}!`, 'success');
+      }
+
+      const { user, accessToken } = response;
       
-      setUser(mockUser, role, mockToken);
-      setLoading(false);
+      // Update global state
+      setUser(user, user.role, accessToken);
       
-      if (role === 'authority') {
+      // Navigate based on role
+      if (user.role === 'authority') {
         navigate('/authority/dashboard');
       } else {
         navigate('/map');
       }
-    }, 1500);
+    } catch (err) {
+      const message = err.response?.data?.message || 'Authentication failed. Please try again.';
+      showToast(message, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -140,36 +183,39 @@ const Auth = () => {
             </p>
           </div>
 
+
           <form onSubmit={handleSubmit} className="space-y-5">
             {mode === 'register' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Full Name</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <User className={`absolute left-3 top-1/2 -translate-y-1/2 ${validationErrors.name ? 'text-red-400' : 'text-slate-400'}`} size={18} />
                     <input 
                       type="text" 
                       name="name"
-                      required
                       placeholder="John Doe"
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo/20 focus:border-indigo outline-none transition-all"
+                      className={`w-full pl-10 pr-4 py-3 bg-slate-50 border ${validationErrors.name ? 'border-red-200 ring-2 ring-red-50' : 'border-slate-100'} rounded-xl focus:ring-2 focus:ring-indigo/20 focus:border-indigo outline-none transition-all`}
                       onChange={handleInputChange}
+                      value={formData.name}
                     />
                   </div>
+                  {validationErrors.name && <p className="mt-1.5 text-[10px] font-bold text-red-500 uppercase tracking-tight">{validationErrors.name}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 ${validationErrors.email ? 'text-red-400' : 'text-slate-400'}`} size={18} />
                     <input 
                       type="email" 
                       name="email"
-                      required
                       placeholder="john@example.com"
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo/20 focus:border-indigo outline-none transition-all"
+                      className={`w-full pl-10 pr-4 py-3 bg-slate-50 border ${validationErrors.email ? 'border-red-200 ring-2 ring-red-50' : 'border-slate-100'} rounded-xl focus:ring-2 focus:ring-indigo/20 focus:border-indigo outline-none transition-all`}
                       onChange={handleInputChange}
+                      value={formData.email}
                     />
                   </div>
+                  {validationErrors.email && <p className="mt-1.5 text-[10px] font-bold text-red-500 uppercase tracking-tight">{validationErrors.email}</p>}
                 </div>
               </div>
             )}
@@ -178,16 +224,17 @@ const Auth = () => {
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 ${validationErrors.email ? 'text-red-400' : 'text-slate-400'}`} size={18} />
                   <input 
                     type="email" 
                     name="email"
-                    required
                     placeholder="john@example.com"
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo/20 focus:border-indigo outline-none transition-all"
+                    className={`w-full pl-10 pr-4 py-3 bg-slate-50 border ${validationErrors.email ? 'border-red-200 ring-2 ring-red-50' : 'border-slate-100'} rounded-xl focus:ring-2 focus:ring-indigo/20 focus:border-indigo outline-none transition-all`}
                     onChange={handleInputChange}
+                    value={formData.email}
                   />
                 </div>
+                {validationErrors.email && <p className="mt-1.5 text-[10px] font-bold text-red-500 uppercase tracking-tight">{validationErrors.email}</p>}
               </div>
             )}
 
@@ -195,14 +242,14 @@ const Auth = () => {
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 ${validationErrors.password ? 'text-red-400' : 'text-slate-400'}`} size={18} />
                   <input 
                     type={showPassword ? "text" : "password"} 
                     name="password"
-                    required
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo/20 focus:border-indigo outline-none transition-all"
+                    className={`w-full pl-10 pr-12 py-3 bg-slate-50 border ${validationErrors.password ? 'border-red-200 ring-2 ring-red-50' : 'border-slate-100'} rounded-xl focus:ring-2 focus:ring-indigo/20 focus:border-indigo outline-none transition-all`}
                     onChange={handleInputChange}
+                    value={formData.password}
                   />
                   <button 
                     type="button"
@@ -212,22 +259,24 @@ const Auth = () => {
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                {validationErrors.password && <p className="mt-1.5 text-[10px] font-bold text-red-500 uppercase tracking-tight">{validationErrors.password}</p>}
               </div>
 
               {mode === 'register' && (
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Confirm Password</label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 ${validationErrors.confirmPassword ? 'text-red-400' : 'text-slate-400'}`} size={18} />
                     <input 
                       type="password" 
                       name="confirmPassword"
-                      required
                       placeholder="••••••••"
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo/20 focus:border-indigo outline-none transition-all"
+                      className={`w-full pl-10 pr-4 py-3 bg-slate-50 border ${validationErrors.confirmPassword ? 'border-red-200 ring-2 ring-red-50' : 'border-slate-100'} rounded-xl focus:ring-2 focus:ring-indigo/20 focus:border-indigo outline-none transition-all`}
                       onChange={handleInputChange}
+                      value={formData.confirmPassword}
                     />
                   </div>
+                  {validationErrors.confirmPassword && <p className="mt-1.5 text-[10px] font-bold text-red-500 uppercase tracking-tight">{validationErrors.confirmPassword}</p>}
                 </div>
               )}
             </div>

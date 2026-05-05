@@ -7,17 +7,24 @@ const useSocket = () => {
   const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
-    if (token) {
-      const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
-        auth: { token },
-      });
-
-      setSocket(newSocket);
-
-      return () => {
-        newSocket.close();
-      };
+    if (!token) {
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+      }
+      return;
     }
+
+    const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
+      auth: { token },
+      transports: ['websocket'],
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.disconnect();
+    };
   }, [token]);
 
   return socket;

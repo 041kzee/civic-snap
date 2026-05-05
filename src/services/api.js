@@ -1,5 +1,6 @@
 import axios from 'axios';
 import useAuthStore from '../store/authStore';
+import useToastStore from '../store/toastStore';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
@@ -28,7 +29,12 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       useAuthStore.getState().logout();
-      window.location.href = '/auth';
+      useToastStore.getState().showToast('Session expired. Please login again.', 'error');
+      
+      // Only redirect if not already on auth page
+      if (!window.location.pathname.includes('/auth')) {
+        window.location.href = '/auth';
+      }
     }
     return Promise.reject(error);
   }

@@ -3,8 +3,11 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Bell, User, LogOut, Camera, Map, Layers, PieChart } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 
+import useNotificationStore from '../../store/notificationStore';
+
 const Navbar = () => {
   const { user, logout } = useAuthStore();
+  const { unreadCount } = useNotificationStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -52,7 +55,11 @@ const Navbar = () => {
       <div className="flex items-center gap-6">
         <Link to="/notifications" className="p-2.5 text-slate-400 hover:text-indigo hover:bg-indigo-light rounded-xl relative transition-all group">
           <Bell size={22} className="group-hover:rotate-12" />
-          <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-danger rounded-full border-2 border-white shadow-sm"></span>
+          {unreadCount > 0 && (
+            <span className="absolute top-2 right-2 w-5 h-5 bg-danger text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
         </Link>
         
         <div className="h-8 w-px bg-slate-100"></div>

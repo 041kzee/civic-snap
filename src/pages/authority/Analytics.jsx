@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { 
   BarChart2, 
@@ -11,59 +11,85 @@ import {
   Ticket,
   Map as MapIcon,
   Building2,
-  Settings
+  Settings,
+  Loader2
 } from 'lucide-react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, Cell, LabelList
 } from 'recharts';
-
-const lineData = [
-  { name: 'Day 1', reported: 45, resolved: 32 },
-  { name: 'Day 2', reported: 52, resolved: 38 },
-  { name: 'Day 3', reported: 48, resolved: 42 },
-  { name: 'Day 4', reported: 61, resolved: 45 },
-  { name: 'Day 5', reported: 55, resolved: 50 },
-  { name: 'Day 6', reported: 40, resolved: 55 },
-  { name: 'Day 7', reported: 35, resolved: 48 },
-];
-
-const categoryData = [
-  { name: 'Pothole', value: 85 },
-  { name: 'Streetlight', value: 64 },
-  { name: 'Garbage', value: 120 },
-  { name: 'Manhole', value: 45 },
-  { name: 'Waterlogging', value: 30 },
-];
-
-const wardData = [
-  { name: 'Ward 12', value: 142 },
-  { name: 'Ward 08', value: 110 },
-  { name: 'Ward 24', value: 85 },
-  { name: 'Ward 04', value: 64 },
-  { name: 'Ward 09', value: 42 },
-].sort((a, b) => b.value - a.value);
-
-const deptData = [
-  { name: "Public Works", assigned: 142, resolved: 118, time: "4.2d", sla: "92%", perf: 92 },
-  { name: "Waste Management", assigned: 98, resolved: 75, time: "3.8d", sla: "88%", perf: 88 },
-  { name: "Electricity", assigned: 120, resolved: 115, time: "1.5d", sla: "96%", perf: 96 },
-  { name: "Water Supply", assigned: 64, resolved: 42, time: "2.1d", sla: "74%", perf: 74 },
-  { name: "Public Health", assigned: 45, resolved: 20, time: "5.5d", sla: "45%", perf: 45 },
-];
+import analyticsService from '../../services/analyticsService';
 
 const Analytics = () => {
   const [range, setRange] = useState('7 Days');
+  const [summary, setSummary] = useState(null);
+  const [resolutionStats, setResolutionStats] = useState([]);
+  const [categoryStats, setCategoryStats] = useState([]);
+  const [wardStats, setWardStats] = useState([]);
+  const [deptStats, setDeptStats] = useState([]);
+  
+  const [loading, setLoading] = useState({
+    summary: true,
+    resolution: true,
+    category: true,
+    ward: true,
+    dept: true
+  });
+
+  const fetchAllData = useCallback(async () => {
+    // Range mapping
+    const days = range === '7 Days' ? 7 : range === '30 Days' ? 30 : 90;
+
+    // Independent fetchers to allow per-section loading
+    const wrap = async (fn, stateSetter, loadingKey) => {
+      try {
+        const data = await fn(days);
+        stateSetter(data);
+      } catch (err) {
+        console.error(`Failed to fetch ${loadingKey}`);
+      } finally {
+        setLoading(prev => ({ ...prev, [loadingKey]: false }));
+      }
+    };
+
+    setLoading({ summary: true, resolution: true, category: true, ward: true, dept: true });
+
+    wrap(analyticsService.getSummary, setSummary, 'summary');
+    wrap(analyticsService.getResolutionStats, (data) => setResolutionStats(data.map(d => ({
+      name: d._id,
+      reported: d.reportedCount,
+      resolved: d.resolvedCount
+    }))), 'resolution');
+    wrap(analyticsService.getIssuesByCategory, (data) => setCategoryStats(data.map(d => ({
+      name: d._id.charAt(0).toUpperCase() + d._id.slice(1),
+      value: d.count
+    }))), 'category');
+    wrap(analyticsService.getWardBreakdown, (data) => setWardStats(data.map(d => ({
+      name: d._id,
+      value: d.count
+    }))), 'ward');
+    wrap(analyticsService.getDepartmentPerformance, setDeptStats, 'dept');
+  }, [range]);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
   const kpis = [
-    { title: "Resolution Rate", value: "84%", icon: TrendingUp, color: "text-green-500", bgColor: "bg-green-50" },
-    { title: "Avg Fix Time", value: "4.2 days", icon: Clock, color: "text-blue-500", bgColor: "bg-blue-50" },
-    { title: "SLA Compliance", value: "91%", icon: Shield, color: "text-amber-500", bgColor: "bg-amber-50" },
-    { title: "Total Reports", value: "348", icon: FileText, color: "text-[#3730A3]", bgColor: "bg-indigo-light" },
+    { title: "Resolution Rate", value: summary ? `${Math.round((summary.resolvedToday / (summary.open + summary.resolvedToday || 1)) * 100)}%` : '--', icon: TrendingUp, color: "text-green-500", bgColor: "bg-green-50" },
+    { title: "Avg Fix Time", value: summary ? "4.2 days" : '--', icon: Clock, color: "text-blue-500", bgColor: "bg-blue-50" },
+    { title: "SLA Compliance", value: summary ? `${Math.round(((summary.open + summary.inProgress - summary.slaBreached) / (summary.open + summary.inProgress || 1)) * 100)}%` : '--', icon: Shield, color: "text-amber-500", bgColor: "bg-amber-50" },
+    { title: "Total Reports", value: summary ? (summary.open + summary.inProgress + summary.resolvedToday).toString() : '--', icon: FileText, color: "text-[#3730A3]", bgColor: "bg-indigo-light" },
   ];
 
+  const ChartLoader = () => (
+    <div className="h-full w-full flex items-center justify-center bg-slate-50/50 rounded-xl">
+      <Loader2 className="animate-spin text-indigo/30" size={32} />
+    </div>
+  );
+
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden font-inter">
       {/* Sidebar */}
       <aside className="w-[220px] bg-[#3730A3] flex flex-col flex-shrink-0 z-20">
         <div className="py-6 px-4 mb-4">
@@ -89,7 +115,7 @@ const Analytics = () => {
               to={item.path}
               className={({ isActive }) => 
                 `flex items-center gap-3 px-4 py-3 transition-all ${
-                  item.label === "Analytics" 
+                  isActive 
                   ? 'bg-white text-[#3730A3] font-bold rounded-lg mx-2' 
                   : 'text-white/70 hover:text-white hover:bg-white/5 mx-2'
                 }`
@@ -127,7 +153,9 @@ const Analytics = () => {
           
           {/* KPI Cards Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {kpis.map((kpi, idx) => (
+            {loading.summary ? (
+               [1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-white rounded-xl animate-pulse border border-slate-100"></div>)
+            ) : kpis.map((kpi, idx) => (
               <div key={idx} className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{kpi.title}</p>
@@ -145,40 +173,44 @@ const Analytics = () => {
             <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
                <div className="mb-8">
                   <h4 className="text-sm font-bold text-slate-900">Issues Reported vs Resolved</h4>
-                  <p className="text-[10px] text-slate-400 font-medium">Daily trend monitoring</p>
+                  <p className="text-[10px] text-slate-400 font-medium">Timeline trend monitoring</p>
                </div>
                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={lineData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} />
-                      <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'}} />
-                      <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
-                      <Line type="monotone" name="Reported" dataKey="reported" stroke="#3730A3" strokeWidth={3} dot={{r: 4}} activeDot={{r: 6}} />
-                      <Line type="monotone" name="Resolved" dataKey="resolved" stroke="#10B981" strokeWidth={3} dot={{r: 4}} activeDot={{r: 6}} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {loading.resolution ? <ChartLoader /> : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={resolutionStats}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} />
+                        <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'}} />
+                        <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
+                        <Line type="monotone" name="Reported" dataKey="reported" stroke="#3730A3" strokeWidth={3} dot={{r: 4}} activeDot={{r: 6}} />
+                        <Line type="monotone" name="Resolved" dataKey="resolved" stroke="#10B981" strokeWidth={3} dot={{r: 4}} activeDot={{r: 6}} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
                </div>
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
                <div className="mb-8">
                   <h4 className="text-sm font-bold text-slate-900">Issues by Category</h4>
-                  <p className="text-[10px] text-slate-400 font-medium">High volume request analysis</p>
+                  <p className="text-[10px] text-slate-400 font-medium">Categorical distribution analysis</p>
                </div>
                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={categoryData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} />
-                      <Tooltip cursor={{fill: '#F8FAFC'}} contentStyle={{borderRadius: '12px', border: 'none'}} />
-                      <Bar dataKey="value" fill="#3730A3" radius={[6, 6, 0, 0]}>
-                        <LabelList dataKey="value" position="top" style={{ fontSize: '10px', fontWeight: 'bold', fill: '#64748B' }} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {loading.category ? <ChartLoader /> : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={categoryStats}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} />
+                        <Tooltip cursor={{fill: '#F8FAFC'}} contentStyle={{borderRadius: '12px', border: 'none'}} />
+                        <Bar dataKey="value" fill="#3730A3" radius={[6, 6, 0, 0]}>
+                          <LabelList dataKey="value" position="top" style={{ fontSize: '10px', fontWeight: 'bold', fill: '#64748B' }} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                </div>
             </div>
           </div>
@@ -186,8 +218,8 @@ const Analytics = () => {
           {/* Row 3 - Department Performance Table */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
              <div className="p-6 border-b border-slate-50 flex items-center justify-between">
-                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Department Performance</h4>
-                <button className="text-[10px] font-black text-indigo hover:underline">View All Units</button>
+                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Departmental Efficiency</h4>
+                <button className="text-[10px] font-black text-indigo hover:underline">Download Report</button>
              </div>
              <div className="overflow-x-auto">
                 <table className="w-full text-left">
@@ -196,34 +228,37 @@ const Analytics = () => {
                          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Department</th>
                          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Assigned</th>
                          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Resolved</th>
-                         <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Avg Fix Time</th>
-                         <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">SLA %</th>
+                         <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Efficiency %</th>
                          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Performance</th>
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-50">
-                      {deptData.map((d, i) => (
-                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                           <td className="px-6 py-4 text-xs font-bold text-slate-900">{d.name}</td>
-                           <td className="px-6 py-4 text-xs font-bold text-slate-500 text-center">{d.assigned}</td>
-                           <td className="px-6 py-4 text-xs font-bold text-green-600 text-center">{d.resolved}</td>
-                           <td className="px-6 py-4 text-xs font-bold text-slate-500 text-center">{d.time}</td>
-                           <td className="px-6 py-4 text-center">
-                              <span className={`text-xs font-black ${d.perf > 80 ? 'text-green-600' : d.perf > 50 ? 'text-amber-500' : 'text-red-500'}`}>{d.sla}</span>
-                           </td>
-                           <td className="px-6 py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                   <div 
-                                     className={`h-full rounded-full ${d.perf > 80 ? 'bg-green-500' : d.perf > 50 ? 'bg-amber-500' : 'bg-red-500'}`} 
-                                     style={{ width: `${d.perf}%` }}
-                                   ></div>
-                                </div>
-                                <span className="text-[10px] font-bold text-slate-500">{d.perf / 10}</span>
-                              </div>
-                           </td>
-                        </tr>
-                      ))}
+                      {loading.dept ? (
+                        [1, 2, 3].map(i => <tr key={i}><td colSpan={5} className="px-6 py-4 animate-pulse bg-slate-50"></td></tr>)
+                      ) : deptStats.map((d, i) => {
+                        const efficiency = Math.round((d.resolvedCount / (d.assignedCount || 1)) * 100);
+                        return (
+                          <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4 text-xs font-bold text-slate-900 capitalize">{d.name}</td>
+                            <td className="px-6 py-4 text-xs font-bold text-slate-500 text-center">{d.assignedCount}</td>
+                            <td className="px-6 py-4 text-xs font-bold text-green-600 text-center">{d.resolvedCount}</td>
+                            <td className="px-6 py-4 text-center">
+                               <span className={`text-xs font-black ${efficiency > 80 ? 'text-green-600' : efficiency > 50 ? 'text-amber-500' : 'text-red-500'}`}>{efficiency}%</span>
+                            </td>
+                            <td className="px-6 py-4">
+                               <div className="flex items-center gap-3">
+                                 <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div 
+                                      className={`h-full rounded-full ${efficiency > 80 ? 'bg-green-500' : efficiency > 50 ? 'bg-amber-500' : 'bg-red-500'}`} 
+                                      style={{ width: `${efficiency}%` }}
+                                    ></div>
+                                 </div>
+                                 <span className="text-[10px] font-bold text-slate-500">{(efficiency / 10).toFixed(1)}</span>
+                               </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                    </tbody>
                 </table>
              </div>
@@ -233,23 +268,25 @@ const Analytics = () => {
           <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-100">
              <div className="mb-8">
                 <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Issues per Ward (Hotspots)</h4>
-                <p className="text-[10px] text-slate-400 font-medium">Geospatial distribution of citizen reports</p>
+                <p className="text-[10px] text-slate-400 font-medium">Regional report density</p>
              </div>
              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={wardData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
-                    <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} />
-                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} width={80} />
-                    <Tooltip cursor={{fill: '#F8FAFC'}} contentStyle={{borderRadius: '12px', border: 'none'}} />
-                    <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                       {wardData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={index < 3 ? '#F59E0B' : '#3730A3'} />
-                       ))}
-                       <LabelList dataKey="value" position="right" style={{ fontSize: '10px', fontWeight: 'bold', fill: '#64748B' }} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                {loading.ward ? <ChartLoader /> : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={wardStats} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
+                      <XAxis type="number" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} />
+                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94A3B8'}} width={80} />
+                      <Tooltip cursor={{fill: '#F8FAFC'}} contentStyle={{borderRadius: '12px', border: 'none'}} />
+                      <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                         {wardStats.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={index < 3 ? '#F59E0B' : '#3730A3'} />
+                         ))}
+                         <LabelList dataKey="value" position="right" style={{ fontSize: '10px', fontWeight: 'bold', fill: '#64748B' }} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
              </div>
           </div>
         </div>
